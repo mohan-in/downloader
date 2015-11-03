@@ -1,20 +1,40 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 var client = http.Client{}
-var maxConn = 2
+
+type resource struct {
+	url         string
+	data        []byte
+	size        int64
+	sectionSize int64
+	sections    []section
+	fileName    string
+}
+
+type section struct {
+	start string
+	end   string
+	data  []byte
+}
 
 func main() {
-	var url string = "http://mirrors.mit.edu/pub/OpenBSD/5.8/i386/bsd.rd"
 
-	req, err := http.NewRequest("HEAD", url, nil)
+	d := &resource{
+		url: "http://mirrors.mit.edu/pub/OpenBSD/5.8/i386/bsd.rd",
+	}
+
+	req, err := http.NewRequest("HEAD", d.url, nil)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -24,41 +44,66 @@ func main() {
 		fmt.Println(err)
 	}
 
-	length := resp.ContentLength
-	fmt.Println(length)
+	d.size = resp.ContentLength
+	d.sectionSize = d.size / 5
+	d.data = make([]byte, d.size)
 
-	var j, sectionSize int64
-	sectionSize = length / 5
-
-	data := make([]byte, length)
 	ch := make(chan int)
 
-	j = 0
-	for i := 0; i < maxConn; i++ {
-		go download(url, j, j+sectionSize, data[j:j+sectionSize], ch)
-		j += sectionSize
+	var j int64 = 0
+	d.sections = make([]section, 5)
+	for i := 0; i < 5; i++ {
+		d.sections[i] = section{}
+		d.sections[i].data = d.data[j : j+d.sectionSize]
+		d.sections[i].start = strconv.FormatInt(j, 10)
+		j += d.sectionSize
+		d.sections[i].end = strconv.FormatInt(j, 10)
 	}
 
-	ioutil.WriteFile("file", data, os.ModePerm)
+	for _, s := range d.sections {
+		go s.download(d.url, ch)
+	}
+
+	for i := 0; i < 5; i++ {
+		<-ch
+	}
+
+	ioutil.WriteFile("file", d.data, os.ModePerm)
 }
 
-func download(url string, start, end int64, data []byte, ch chan int) {
+func (s *section) download(url string, ch chan int) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	req.Header.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10))
+	req.Header.Add("Range", "bytes="+s.start+"-"+s.end)
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	defer resp.Body.Close()
-	buf, err := ioutil.ReadAll(resp.Body)
+	r := bufio.NewReader(resp.Body)
 
-	for i, c := range buf {
-		data[i] = c
+	n := 0
+
+	ticker := time.NewTicker(5 * time.Second)
+
+	go func() {
+		for {
+			tn, err := r.Read(s.data)
+			n = n + tn
+			if err == io.EOF {
+				ticker.Stop()
+				break
+			}
+		}
+	}()
+
+	for _ = range ticker.C {
+		fmt.Println("speed: " + strconv.Itoa(n/(1024*5)))
+		n = 0
 	}
 
 	ch <- 0
