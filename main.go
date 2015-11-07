@@ -88,6 +88,7 @@ func download(s *section, url string, ch chan int) {
 	}
 
 	defer resp.Body.Close()
+
 	r := bufio.NewReader(resp.Body)
 
 	var n int64
