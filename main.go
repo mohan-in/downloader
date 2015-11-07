@@ -24,15 +24,15 @@ type resource struct {
 
 type section struct {
 	id    int
-	start string
-	end   string
+	start int64
+	end   int64
 	data  []byte
 }
 
 func main() {
 
 	d := &resource{
-		url: "http://mirrors.mit.edu/pub/OpenBSD/README",
+		url: "http://mirrors.mit.edu/pub/OpenBSD/doc/obsd-faq.txt",
 	}
 
 	req, err := http.NewRequest("HEAD", d.url, nil)
@@ -57,10 +57,10 @@ func main() {
 		d.sections[i] = section{
 			id:    i,
 			data:  d.data[j : j+d.sectionSize],
-			start: strconv.FormatInt(j, 10),
+			start: j,
 		}
 		j += d.sectionSize
-		d.sections[i].end = strconv.FormatInt(j, 10)
+		d.sections[i].end = j - 1
 	}
 
 	for _, s := range d.sections {
@@ -81,7 +81,7 @@ func download(s *section, url string, ch chan int) {
 		fmt.Println(err)
 	}
 
-	req.Header.Add("Range", "bytes="+s.start+"-"+s.end)
+	req.Header.Add("Range", "bytes="+strconv.FormatInt(s.start, 10)+"-"+strconv.FormatInt(s.end, 10))
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
@@ -90,28 +90,28 @@ func download(s *section, url string, ch chan int) {
 	defer resp.Body.Close()
 	r := bufio.NewReader(resp.Body)
 
-	n := 0
+	var n int64
 
 	ticker := time.NewTicker(5 * time.Second)
 
 	go func() {
 		for _ = range ticker.C {
-			fmt.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.Itoa(n/(1024*5)))
+			fmt.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.FormatInt(n/(1024*5), 10))
 			n = 0
 		}
 	}()
 
 	for {
 		tn, err := r.Read(s.data)
-		n = n + tn
+		n = n + int64(tn)
 		if err == io.EOF {
+			fmt.Println(err)
 			ticker.Stop()
 			break
 		}
 	}
 
 	fmt.Println("Section " + strconv.Itoa(s.id) + " completed")
-	fmt.Println("Section " + strconv.Itoa(s.id) + " data " + string(s.data))
 
 	ch <- 0
 }
