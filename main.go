@@ -2,16 +2,21 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"flag"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 )
 
-var client = http.Client{}
+var (
+	client http.Client
+	logger *log.Logger
+	url    string
+)
 
 type resource struct {
 	url         string
@@ -29,20 +34,29 @@ type section struct {
 	data  []byte
 }
 
+func init() {
+	client = http.Client{}
+	logger = log.New(os.Stdout, "downloader: ", log.Lshortfile)
+	flag.StringVar(&url, "file", "", "the file to download")
+}
+
 func main() {
+	flag.Parse()
 
 	d := &resource{
-		url: "http://mirrors.mit.edu/pub/OpenBSD/doc/obsd-faq.txt",
+		url: url,
 	}
+
+	logger.Println(url)
 
 	req, err := http.NewRequest("HEAD", d.url, nil)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 
 	d.size = resp.ContentLength
@@ -78,13 +92,14 @@ func main() {
 func download(s *section, url string, ch chan int) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 
 	req.Header.Add("Range", "bytes="+strconv.FormatInt(s.start, 10)+"-"+strconv.FormatInt(s.end, 10))
+
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 	}
 
 	defer resp.Body.Close()
@@ -96,7 +111,7 @@ func download(s *section, url string, ch chan int) {
 
 	go func() {
 		for _ = range ticker.C {
-			fmt.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.FormatInt(n/(1024*5), 10))
+			logger.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.FormatInt(n/(1024*5), 10))
 			n = 0
 		}
 	}()
@@ -105,13 +120,12 @@ func download(s *section, url string, ch chan int) {
 		tn, err := r.Read(s.data)
 		n = n + int64(tn)
 		if err == io.EOF {
-			fmt.Println(err)
 			ticker.Stop()
 			break
 		}
 	}
 
-	fmt.Println("Section " + strconv.Itoa(s.id) + " completed")
+	logger.Println("Section " + strconv.Itoa(s.id) + " completed")
 
 	ch <- 0
 }
