@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"io"
 	"io/ioutil"
@@ -46,8 +45,6 @@ func main() {
 	d := &resource{
 		url: url,
 	}
-
-	logger.Println(url)
 
 	req, err := http.NewRequest("HEAD", d.url, nil)
 	if err != nil {
@@ -103,9 +100,8 @@ func download(s *section, url string, ch chan int) {
 	}
 
 	defer resp.Body.Close()
-	r := bufio.NewReader(resp.Body)
 
-	var n int64
+	var n, size int64
 
 	ticker := time.NewTicker(5 * time.Second)
 
@@ -116,8 +112,14 @@ func download(s *section, url string, ch chan int) {
 		}
 	}()
 
+	buf := make([]byte, 128*1024)
+
 	for {
-		tn, err := r.Read(s.data)
+		tn, err := resp.Body.Read(buf)
+		for i := 0; i < tn; i++ {
+			s.data[size] = buf[i]
+			size++
+		}
 		n = n + int64(tn)
 		if err == io.EOF {
 			ticker.Stop()
