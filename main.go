@@ -42,11 +42,15 @@ func init() {
 func main() {
 	flag.Parse()
 
-	d := &resource{
+	res := &resource{
 		url: url,
 	}
 
-	req, err := http.NewRequest("HEAD", d.url, nil)
+	res.download()
+}
+
+func (res *resource) download() {
+	req, err := http.NewRequest("HEAD", res.url, nil)
 	if err != nil {
 		logger.Println(err)
 	}
@@ -56,37 +60,37 @@ func main() {
 		logger.Println(err)
 	}
 
-	d.size = resp.ContentLength
-	d.sectionSize = d.size / 5
-	d.data = make([]byte, d.size)
+	res.size = resp.ContentLength
+	res.sectionSize = res.size / 5
+	res.data = make([]byte, res.size)
 
 	ch := make(chan int)
 
 	var j int64 = 0
-	d.sections = make([]section, 5)
+	res.sections = make([]section, 5)
 	for i := 0; i < 5; i++ {
-		d.sections[i] = section{
+		res.sections[i] = section{
 			id:    i,
-			data:  d.data[j : j+d.sectionSize],
+			data:  res.data[j : j+res.sectionSize],
 			start: j,
 		}
-		j += d.sectionSize
-		d.sections[i].end = j - 1
+		j += res.sectionSize
+		res.sections[i].end = j - 1
 	}
 
-	for _, s := range d.sections {
+	for _, s := range res.sections {
 		s := s
-		go download(&s, d.url, ch)
+		go s.download(res.url, ch)
 	}
 
 	for i := 0; i < 5; i++ {
 		<-ch
 	}
 
-	ioutil.WriteFile("file", d.data, os.ModePerm)
+	ioutil.WriteFile("file", res.data, os.ModePerm)
 }
 
-func download(s *section, url string, ch chan int) {
+func (s *section) download(url string, ch chan int) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logger.Println(err)
@@ -104,23 +108,22 @@ func download(s *section, url string, ch chan int) {
 	var n, size int64
 
 	ticker := time.NewTicker(5 * time.Second)
-
 	go func() {
 		for _ = range ticker.C {
-			logger.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.FormatInt(n/(1024*5), 10))
+			logger.Println("Section: " + strconv.Itoa(s.id) + "; speed: " + strconv.FormatInt(n/(1024*5), 10) + "KB/s")
 			n = 0
 		}
 	}()
 
 	buf := make([]byte, 128*1024)
-
 	for {
 		tn, err := resp.Body.Read(buf)
-		for i := 0; i < tn; i++ {
-			s.data[size] = buf[i]
-			size++
-		}
+
+		copy(s.data[size:], buf[0:tn])
+		size += int64(tn)
+
 		n = n + int64(tn)
+
 		if err == io.EOF {
 			ticker.Stop()
 			break
