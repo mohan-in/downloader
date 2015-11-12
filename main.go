@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var (
@@ -46,7 +47,8 @@ func main() {
 }
 
 func listen(s *Section) {
-	for spd := range s.speed {
-		logger.Printf("Section: %d; speed: %d KB/s", s.id, spd)
+	ticker := time.NewTicker(5 * time.Second)
+	for _ = range ticker.C {
+		logger.Printf("Section: %d; speed: %d KB/s", s.id, s.speed)
 	}
 }

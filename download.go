@@ -25,7 +25,7 @@ type Section struct {
 	start int64
 	end   int64
 	data  []byte
-	speed chan int64
+	speed int64
 }
 
 func (res *Resource) Download() {
@@ -50,7 +50,6 @@ func (res *Resource) Download() {
 			id:    i,
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
-			speed: make(chan int64),
 		}
 		j += res.sectionSize
 		res.sections[i].end = j - 1
@@ -77,7 +76,7 @@ func (s *Section) Download(url string, ch chan int) {
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for _ = range ticker.C {
-			s.speed <- bufSize / (1024 * 5)
+			s.speed = bufSize / (1024 * 5)
 			bufSize = 0
 		}
 	}()
@@ -99,6 +98,5 @@ func (s *Section) Download(url string, ch chan int) {
 	logger.Printf("Section %d completed", s.id)
 
 	ticker.Stop()
-	close(s.speed)
 	ch <- s.id
 }
