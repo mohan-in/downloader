@@ -12,24 +12,24 @@ var (
 )
 
 type Resource struct {
-	url         string
+	Url         string
 	data        []byte
-	size        int64
+	Size        int64
 	sectionSize int64
 	sections    []Section
-	fileName    string
+	FileName    string
 }
 
 type Section struct {
-	id    int
+	Id    int
 	start int64
 	end   int64
 	data  []byte
-	speed int64
+	Speed int64
 }
 
 func (res *Resource) Download() {
-	req, err := http.NewRequest("HEAD", res.url, nil)
+	req, err := http.NewRequest("HEAD", res.Url, nil)
 	if err != nil {
 		logger.Println(err)
 	}
@@ -39,15 +39,15 @@ func (res *Resource) Download() {
 		logger.Println(err)
 	}
 
-	res.size = resp.ContentLength
-	res.sectionSize = res.size / 5
-	res.data = make([]byte, res.size)
+	res.Size = resp.ContentLength
+	res.sectionSize = res.Size / 5
+	res.data = make([]byte, res.Size)
 
 	var j int64 = 0
 	res.sections = make([]Section, 5)
 	for i := 0; i < 5; i++ {
 		res.sections[i] = Section{
-			id:    i,
+			Id:    i,
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
 		}
@@ -76,7 +76,7 @@ func (s *Section) Download(url string, ch chan int) {
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for _ = range ticker.C {
-			s.speed = bufSize / (1024 * 5)
+			s.Speed = bufSize / (1024 * 5)
 			bufSize = 0
 		}
 	}()
@@ -95,8 +95,8 @@ func (s *Section) Download(url string, ch chan int) {
 		}
 	}
 
-	logger.Printf("Section %d completed", s.id)
+	logger.Printf("Section %d completed", s.Id)
 
 	ticker.Stop()
-	ch <- s.id
+	ch <- s.Id
 }

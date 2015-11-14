@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	res := &Resource{
-		url: url,
+		Url: url,
 	}
 
 	res.Download()
@@ -35,7 +35,7 @@ func main() {
 
 	for _, s := range res.sections {
 		s := s
-		go s.Download(res.url, ch)
+		go s.Download(res.Url, ch)
 		go listen(&s)
 	}
 
@@ -49,6 +49,6 @@ func main() {
 func listen(s *Section) {
 	ticker := time.NewTicker(5 * time.Second)
 	for _ = range ticker.C {
-		logger.Printf("Section: %d; speed: %d KB/s", s.id, s.speed)
+		logger.Printf("Section: %d; speed: %d KB/s", s.Id, s.Speed)
 	}
 }
