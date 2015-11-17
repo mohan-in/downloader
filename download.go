@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	client http.Client
+	client         http.Client
+	NoOfConnection int = 5
 )
 
 type Resource struct {
@@ -40,12 +41,12 @@ func (res *Resource) Download() {
 	}
 
 	res.Size = resp.ContentLength
-	res.sectionSize = res.Size / 5
+	res.sectionSize = res.Size / int64(NoOfConnection)
 	res.data = make([]byte, res.Size)
 
 	var j int64 = 0
 	res.sections = make([]Section, 5)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < NoOfConnection; i++ {
 		res.sections[i] = Section{
 			Id:    i,
 			data:  res.data[j : j+res.sectionSize],
@@ -81,7 +82,7 @@ func (s *Section) Download(url string, ch chan int) {
 		}
 	}()
 
-	buf := make([]byte, 128*1024)
+	buf := make([]byte, 128<<10)
 	for {
 		n, err := resp.Body.Read(buf)
 
