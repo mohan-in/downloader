@@ -10,6 +10,8 @@ import (
 var (
 	client         http.Client
 	NoOfConnection int = 5
+	SectionSize    int = 50
+	NetworkSpeed   int = 128
 )
 
 type Resource struct {
@@ -41,19 +43,32 @@ func (res *Resource) Download() {
 	}
 
 	res.Size = resp.ContentLength
-	res.sectionSize = res.Size / int64(NoOfConnection)
 	res.data = make([]byte, res.Size)
 
-	var j int64 = 0
-	res.sections = make([]Section, 5)
-	for i := 0; i < NoOfConnection; i++ {
+	var j int64
+	var noOfSections int
+
+	if res.Size>>20 < 50 {
+		res.sectionSize = res.Size / int64(NoOfConnection)
+		noOfSections = NoOfConnection
+	} else {
+		res.sectionSize = int64(SectionSize) >> 20
+		noOfSections = int(res.Size / res.sectionSize)
+	}
+
+	res.sections = make([]Section, noOfSections)
+	for i := 0; i < noOfSections; i++ {
 		res.sections[i] = Section{
 			Id:    i,
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
 		}
-		j += res.sectionSize
-		res.sections[i].end = j - 1
+		if i+1 == noOfSections {
+			res.sections[i].end = res.Size
+		} else {
+			j += res.sectionSize
+			res.sections[i].end = j - 1
+		}
 	}
 }
 
@@ -82,17 +97,23 @@ func (s *Section) Download(url string, ch chan int) {
 		}
 	}()
 
-	buf := make([]byte, 128<<10)
+	buf := make([]byte, NetworkSpeed<<10)
 	for {
 		n, err := resp.Body.Read(buf)
 
 		copy(s.data[sectionSize:], buf[0:n])
 		sectionSize += int64(n)
-
 		bufSize = bufSize + int64(n)
 
-		if err == io.EOF {
-			break
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
+				s.start += bufSize
+				go s.Download(url, ch)
+				return
+			}
 		}
 	}
 

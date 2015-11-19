@@ -20,6 +20,9 @@ func init() {
 	logger = log.New(os.Stdout, "downloader: ", log.Lshortfile)
 	flag.BoolVar(&daemon, "daemon", false, "launch as daemon")
 	flag.StringVar(&url, "file", "", "the file to download")
+	flag.IntVar(&NoOfConnection, "n", 5, "Number of connections to the server")
+	flag.IntVar(&SectionSize, "size", 50, "Section size in MB")
+	flag.IntVar(&NetworkSpeed, "speed", 128, "Network speed in KB")
 }
 
 func main() {
