@@ -42,7 +42,7 @@ func main() {
 		go listen(&s)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < len(res.sections); i++ {
 		<-ch
 	}
 

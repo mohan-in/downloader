@@ -10,6 +10,7 @@ import (
 var (
 	client         http.Client
 	NoOfConnection int = 5
+	NoOfSection    int
 	SectionSize    int = 50
 	NetworkSpeed   int = 128
 )
@@ -29,6 +30,8 @@ type Section struct {
 	end   int64
 	data  []byte
 	Speed int64
+	pause chan int
+	stop  chan int
 }
 
 func (res *Resource) Download() {
@@ -46,24 +49,25 @@ func (res *Resource) Download() {
 	res.data = make([]byte, res.Size)
 
 	var j int64
-	var noOfSections int
+	var NoOfSections int
 
 	if res.Size>>20 < 50 {
 		res.sectionSize = res.Size / int64(NoOfConnection)
-		noOfSections = NoOfConnection
+		NoOfSections = NoOfConnection
 	} else {
 		res.sectionSize = int64(SectionSize) >> 20
-		noOfSections = int(res.Size / res.sectionSize)
+		NoOfSections = int(res.Size / res.sectionSize)
 	}
 
-	res.sections = make([]Section, noOfSections)
-	for i := 0; i < noOfSections; i++ {
+	res.sections = make([]Section, NoOfSections)
+	for i := 0; i < NoOfSections; i++ {
 		res.sections[i] = Section{
 			Id:    i,
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
+			pause: make(chan int),
 		}
-		if i+1 == noOfSections {
+		if i+1 == NoOfSections {
 			res.sections[i].end = res.Size
 		} else {
 			j += res.sectionSize
@@ -98,21 +102,29 @@ func (s *Section) Download(url string, ch chan int) {
 	}()
 
 	buf := make([]byte, NetworkSpeed<<10)
+
 	for {
-		n, err := resp.Body.Read(buf)
+		select {
+		case _ = <-s.pause:
+			<-s.pause
+		case _ = <-s.stop:
+			return
+		default:
+			n, err := resp.Body.Read(buf)
 
-		copy(s.data[sectionSize:], buf[0:n])
-		sectionSize += int64(n)
-		bufSize = bufSize + int64(n)
+			copy(s.data[sectionSize:], buf[0:n])
+			sectionSize += int64(n)
+			bufSize = bufSize + int64(n)
 
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
-				s.start += bufSize
-				go s.Download(url, ch)
-				return
+			if err != nil {
+				if err == io.EOF {
+					break
+				} else {
+					logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
+					s.start += bufSize
+					go s.Download(url, ch)
+					return
+				}
 			}
 		}
 	}
