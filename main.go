@@ -28,11 +28,7 @@ func init() {
 func main() {
 	flag.Parse()
 
-	res := &Resource{
-		Url: url,
-	}
-
-	res.Download()
+	res := NewResource(url)
 
 	ch := make(chan int)
 

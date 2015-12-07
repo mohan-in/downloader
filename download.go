@@ -34,7 +34,11 @@ type Section struct {
 	stop  chan int
 }
 
-func (res *Resource) Download() {
+func NewResource(url string) *Resource {
+	res := &Resource{
+		Url: url,
+	}
+
 	req, err := http.NewRequest("HEAD", res.Url, nil)
 	if err != nil {
 		logger.Println(err)
@@ -74,6 +78,8 @@ func (res *Resource) Download() {
 			res.sections[i].end = j - 1
 		}
 	}
+
+	return res
 }
 
 func (s *Section) Download(url string, ch chan int) {
