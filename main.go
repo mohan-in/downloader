@@ -28,21 +28,31 @@ func init() {
 func main() {
 	flag.Parse()
 
-	res := NewResource(url)
+	if daemon {
+		http.HandleFunc("/", downloadHandler)
+		http.HandleFunc("/static/", staticFilesHandler)
+		http.ListenAndServe(":8080", nil)
+	} else {
+		res, err := NewResource(url)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
 
-	ch := make(chan int)
+		ch := make(chan int)
 
-	for _, s := range res.sections {
-		s := s
-		go s.Download(res.Url, ch)
-		go listen(&s)
+		for _, s := range res.sections {
+			s := s
+			go s.Download(res.Url, ch)
+			go listen(&s)
+		}
+
+		for i := 0; i < len(res.sections); i++ {
+			<-ch
+		}
+
+		ioutil.WriteFile("file", res.data, os.ModePerm)
 	}
-
-	for i := 0; i < len(res.sections); i++ {
-		<-ch
-	}
-
-	ioutil.WriteFile("file", res.data, os.ModePerm)
 }
 
 func listen(s *Section) {
@@ -50,4 +60,12 @@ func listen(s *Section) {
 	for _ = range ticker.C {
 		logger.Printf("Section: %d; speed: %d KB/s", s.Id, s.Speed)
 	}
+}
+
+func staticFilesHandler(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFile(rw, req, req.URL.Path[1:])
+}
+
+func downloadHandler(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFile(rw, req, "static/downloader.html")
 }

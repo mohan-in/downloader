@@ -8,9 +8,7 @@ import (
 )
 
 var (
-	client         http.Client
 	NoOfConnection int = 5
-	NoOfSection    int
 	SectionSize    int = 50
 	NetworkSpeed   int = 128
 )
@@ -34,27 +32,29 @@ type Section struct {
 	stop  chan int
 }
 
-func NewResource(url string) *Resource {
+var client http.Client
+
+func NewResource(url string) (*Resource, error) {
 	res := &Resource{
 		Url: url,
 	}
 
+	//find out the size of resource
 	req, err := http.NewRequest("HEAD", res.Url, nil)
 	if err != nil {
 		logger.Println(err)
+		return nil, err
 	}
-
 	resp, err := client.Do(req)
 	if err != nil {
 		logger.Println(err)
+		return nil, err
 	}
-
 	res.Size = resp.ContentLength
 	res.data = make([]byte, res.Size)
 
-	var j int64
+	//determine number of sections
 	var NoOfSections int
-
 	if res.Size>>20 < 50 {
 		res.sectionSize = res.Size / int64(NoOfConnection)
 		NoOfSections = NoOfConnection
@@ -63,6 +63,8 @@ func NewResource(url string) *Resource {
 		NoOfSections = int(res.Size / res.sectionSize)
 	}
 
+	//create sections
+	var j int64
 	res.sections = make([]Section, NoOfSections)
 	for i := 0; i < NoOfSections; i++ {
 		res.sections[i] = Section{
@@ -79,7 +81,7 @@ func NewResource(url string) *Resource {
 		}
 	}
 
-	return res
+	return res, nil
 }
 
 func (s *Section) Download(url string, ch chan int) {
