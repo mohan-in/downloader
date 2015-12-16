@@ -7,10 +7,7 @@
 <link rel="import" href="/static/bower_components/paper-input/paper-input.html">
 <link rel="import" href="/static/bower_components/paper-button/paper-button.html">
 
-<link rel="import" href="/static/bower_components/paper-item/paper-item.html">
-<link rel="import" href="/static/bower_components/paper-item/paper-icon-item.html">
-<link rel="import" href="/static/bower_components/paper-progress/paper-progress.html">
-<link rel="import" href="/static/bower_components/iron-collapse/iron-collapse.html">
+<link rel="import" href="/static/go-resource.html">
 
 <dom-module id="go-downloader">
 	<style>
@@ -23,13 +20,6 @@
 		#addDownloadDialog paper-input {
 			width: 80%;
 		}
-		paper-progress {
-			width: 100%;
-		}
-		iron-collapse {
-			width: 100%; 
-		}
-
 	</style>
 
 	<template>
@@ -39,20 +29,9 @@
 			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
 
-		<paper-item>
-			<paper-icon-button icon="expand-more" on-click="toggle"></paper-icon-button>
-			<paper-progress value="50"></paper-progress>
-			<paper-icon-button icon="av:pause"></paper-icon-button>
-			<paper-icon-button icon="av:stop"></paper-icon-button>
-		</paper-item>
-		<iron-collapse id="collapse">
-			<paper-icon-item>	
-				<div>Section 1</div>
-				<paper-progress value="50"></paper-progress>
-				<paper-icon-button icon="av:pause"></paper-icon-button>
-				<paper-icon-button icon="av:stop"></paper-icon-button>	
-			</paper-icon-item>
-		</iron-collapse>
+		<go-resource></go-resource>
+		<go-resource></go-resource>
+		<go-resource></go-resource>
 
 		<paper-dialog id="addDownloadDialog">
 			<h2>Header</h2>
@@ -70,10 +49,7 @@
 		Polymer({
 			addDownload: function() {
 				this.$.addDownloadDialog.open()
-			},
-			toggle: function() {
-				this.$.collapse.toggle();
 			}
-		})
+		});
 	</script>
 </dom-module>
