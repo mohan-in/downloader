@@ -39,16 +39,16 @@ func main() {
 			return
 		}
 
-		ch := make(chan int)
+		done := make(chan int)
 
 		for _, s := range res.sections {
 			s := s
-			go s.Download(res.Url, ch)
+			go s.Download(res.Url, done)
 			go listen(&s)
 		}
 
-		for i := 0; i < len(res.sections); i++ {
-			<-ch
+		for i := 0; i < 5; i++ {
+			<-done
 		}
 
 		ioutil.WriteFile("file", res.data, os.ModePerm)

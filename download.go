@@ -84,7 +84,7 @@ func NewResource(url string) (*Resource, error) {
 	return res, nil
 }
 
-func (s *Section) Download(url string, ch chan int) {
+func (s *Section) Download(url string, done chan int) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logger.Println(err)
@@ -101,7 +101,9 @@ func (s *Section) Download(url string, ch chan int) {
 
 	var bufSize, sectionSize int64
 
+	//calculate the speed every five seconds
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	go func() {
 		for _ = range ticker.C {
 			s.Speed = bufSize / (1024 * 5)
@@ -109,6 +111,7 @@ func (s *Section) Download(url string, ch chan int) {
 		}
 	}()
 
+	//buf is a buffer to store the result from each read operation
 	buf := make([]byte, NetworkSpeed<<10)
 
 	for {
@@ -126,19 +129,16 @@ func (s *Section) Download(url string, ch chan int) {
 
 			if err != nil {
 				if err == io.EOF {
-					break
+					logger.Printf("Section %d completed", s.Id)
+					done <- s.Id
+					return
 				} else {
 					logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
 					s.start += bufSize
-					go s.Download(url, ch)
+					go s.Download(url, done)
 					return
 				}
 			}
 		}
 	}
-
-	logger.Printf("Section %d completed", s.Id)
-
-	ticker.Stop()
-	ch <- s.Id
 }
