@@ -18,18 +18,19 @@ type Resource struct {
 	data        []byte
 	Size        int64
 	sectionSize int64
-	sections    []Section
+	Sections    []*Section
 	FileName    string
 }
 
 type Section struct {
-	Id    int
-	start int64
-	end   int64
-	data  []byte
-	Speed int64
-	pause chan int
-	stop  chan int
+	Id          int
+	start       int64
+	end         int64
+	data        []byte
+	Speed       int64
+	PctComplete int
+	pause       chan int
+	stop        chan int
 }
 
 var client http.Client
@@ -65,19 +66,19 @@ func NewResource(url string) (*Resource, error) {
 
 	//create sections
 	var j int64
-	res.sections = make([]Section, NoOfSections)
+	res.Sections = make([]*Section, NoOfSections)
 	for i := 0; i < NoOfSections; i++ {
-		res.sections[i] = Section{
+		res.Sections[i] = &Section{
 			Id:    i,
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
 			pause: make(chan int),
 		}
 		if i+1 == NoOfSections {
-			res.sections[i].end = res.Size
+			res.Sections[i].end = res.Size
 		} else {
 			j += res.sectionSize
-			res.sections[i].end = j - 1
+			res.Sections[i].end = j - 1
 		}
 	}
 
@@ -108,6 +109,7 @@ func (s *Section) Download(url string, done chan int) {
 		for _ = range ticker.C {
 			s.Speed = bufSize / (1024 * 5)
 			bufSize = 0
+			s.PctComplete = (len(s.data) / int((s.end - s.start))) * 100
 		}
 	}()
 

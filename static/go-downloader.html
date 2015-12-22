@@ -8,6 +8,7 @@
 <link rel="import" href="/static/bower_components/paper-button/paper-button.html">
 
 <link rel="import" href="/static/go-resource.html">
+<script src="/static/ajax.js"></script>
 
 <dom-module id="go-downloader">
 	<style>
@@ -29,26 +30,60 @@
 			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
 
-		<go-resource></go-resource>
-		<go-resource></go-resource>
-		<go-resource></go-resource>
+		<go-resource id="first"></go-resource>
 
 		<paper-dialog id="addDownloadDialog">
 			<h2>Header</h2>
 			<paper-dialog-scrollable>
-				<paper-input label="URL:"></paper-input>
+				<paper-input id="urlInput" label="URL:"></paper-input>
 			</paper-dialog-scrollable>
 			<div class="buttons">
 				<paper-button dialog-dismiss>Cancel</paper-button>
-				<paper-button dialog-confirm>OK</paper-button>
+				<paper-button dialog-confirm on-click="addResource">OK</paper-button>
 			</div>
 		</paper-dialog>
 	</template>
 
 	<script>
 		Polymer({
+			ready: function() {
+				var that = this
+				ajax({
+					url: '/resources',
+					method: 'GET',
+					success: function(data) {
+						console.log('fetched resources successfully');
+						console.log(JSON.parse(data));
+						var resources = JSON.parse(data);
+						if(resources !== null) {
+							that.$.first.resource = resources[0];
+							that.$.first.sections = resources[0].Sections;
+						}
+					},
+					error: function() {
+						console.log('error in fetching resources');
+					}
+				})
+			},
+			
 			addDownload: function() {
 				this.$.addDownloadDialog.open()
+			},
+			
+			addResource: function() {
+				ajax({
+					url: '/resources',
+					method: 'POST',
+					data: {
+						URL: this.$.urlInput.value
+					},
+					success: function() {
+						console.log('added resource successfully');
+					},
+					error: function() {
+						console.log('error in adding resource');
+					}
+				})
 			}
 		});
 	</script>

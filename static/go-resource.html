@@ -26,7 +26,7 @@
 		<paper-item>
 			<paper-icon-button icon="expand-more" on-click="toggle"></paper-icon-button>
 			<paper-item-body>
-				<span>URL</span>
+				<span>{{resource.Url}}</span>
 				<paper-progress value="{{resource.pct}}"></paper-progress>
 			</paper-item-body>
 			<paper-icon-button icon="av:pause"></paper-icon-button>
@@ -36,7 +36,7 @@
 			<paper-icon-item>
 				<paper-item-body>
 					<span>Section 1</span>
-					<paper-progress value="50"></paper-progress>
+					<paper-progress value="[[arrayItem(sections.*, 0, 'PctComplete')]]"></paper-progress>
 				</paper-item-body>
 				<paper-icon-button icon="av:pause"></paper-icon-button>
 				<paper-icon-button icon="av:stop"></paper-icon-button>	
@@ -47,13 +47,21 @@
 
 	<script>
 		Polymer({
+			is: 'go-resource',
+
 			properties: {
 				resource: Object,
+				sections: Array
 			},
+
+			arrayItem: function(change, index, path) {
+        		return this.get(path, change.base[index]);
+      		},
+
 			ready: function() {
-				this.resource = {};
-				this.resource.pct = '40';
+				this.pct = '50';
 			},
+
 			toggle: function() {
 				this.$.collapse.toggle();
 			}
