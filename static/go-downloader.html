@@ -30,7 +30,7 @@
 			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
 
-		<go-resource id="first"></go-resource>
+		<div id="resources"></div>
 
 		<paper-dialog id="addDownloadDialog">
 			<h2>Header</h2>
@@ -52,12 +52,15 @@
 					url: '/resources',
 					method: 'GET',
 					success: function(data) {
-						console.log('fetched resources successfully');
-						console.log(JSON.parse(data));
 						var resources = JSON.parse(data);
 						if(resources !== null) {
-							that.$.first.resource = resources[0];
-							that.$.first.sections = resources[0].Sections;
+							for (var i = 0; i < resources.length; i++) {
+								var elem = document.createElement("go-resource");
+								elem.resource = resources[i];
+								elem.sections = resources[i].Sections;
+								that.$.resources.appendChild(elem);
+							}
+							
 						}
 					},
 					error: function() {

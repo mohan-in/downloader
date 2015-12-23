@@ -27,20 +27,22 @@
 			<paper-icon-button icon="expand-more" on-click="toggle"></paper-icon-button>
 			<paper-item-body>
 				<span>{{resource.Url}}</span>
-				<paper-progress value="{{resource.pct}}"></paper-progress>
+				<paper-progress value="[[resourcePct]]"></paper-progress>
 			</paper-item-body>
 			<paper-icon-button icon="av:pause"></paper-icon-button>
 			<paper-icon-button icon="av:stop"></paper-icon-button>
 		</paper-item>
 		<iron-collapse id="collapse">
-			<paper-icon-item>
-				<paper-item-body>
-					<span>Section 1</span>
-					<paper-progress value="[[arrayItem(sections.*, 0, 'PctComplete')]]"></paper-progress>
-				</paper-item-body>
-				<paper-icon-button icon="av:pause"></paper-icon-button>
-				<paper-icon-button icon="av:stop"></paper-icon-button>	
-			</paper-icon-item>
+			<template is="dom-repeat" items="{{sections}}">
+				<paper-icon-item>
+					<paper-item-body>
+						<span>Section [[item.Id]]</span>
+						<paper-progress value="[[item.PctComplete]]"></paper-progress>
+					</paper-item-body>
+					<paper-icon-button icon="av:pause"></paper-icon-button>
+					<paper-icon-button icon="av:stop"></paper-icon-button>	
+				</paper-icon-item>
+			</template>
 		</iron-collapse>
 		</div>
 	</template>
@@ -51,16 +53,20 @@
 
 			properties: {
 				resource: Object,
-				sections: Array
+				sections: {
+					type: Array,
+					observer: '_calcResourcePct'
+				},
+				resourcePct: String
 			},
 
-			arrayItem: function(change, index, path) {
-        		return this.get(path, change.base[index]);
+			_calcResourcePct: function(newValue, oldValue) {
+				var pct = 0;
+				for (var i = 0; i < newValue.length; i++) {
+					pct = pct + newValue[i].PctComplete;
+				}
+        		this.resourcePct = pct/newValue.length;
       		},
-
-			ready: function() {
-				this.pct = '50';
-			},
 
 			toggle: function() {
 				this.$.collapse.toggle();
