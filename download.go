@@ -133,6 +133,7 @@ func (s *Section) Download(url string, done chan int) {
 				if err == io.EOF {
 					logger.Printf("Section %d completed", s.Id)
 					done <- s.Id
+					s.PctComplete = 100
 					return
 				} else {
 					logger.Printf("Error in downloading section %d. Restartinf download", s.Id)

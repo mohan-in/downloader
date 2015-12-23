@@ -31,11 +31,9 @@ func main() {
 	flag.Parse()
 
 	if daemon {
-		http.HandleFunc("/", downloadHandler)
+		http.HandleFunc("/", indexHandler)
 		http.HandleFunc("/static/", staticFilesHandler)
-
 		http.HandleFunc("/resources", resourcesHandler)
-
 		http.ListenAndServe(":8080", nil)
 	} else {
 		res, err := NewResource(url)
@@ -49,7 +47,12 @@ func main() {
 		for _, s := range res.Sections {
 			s := s
 			go s.Download(res.Url, done)
-			go listen(s)
+			go func() {
+				ticker := time.NewTicker(5 * time.Second)
+				for _ = range ticker.C {
+					logger.Printf("Section: %d; speed: %d KB/s", s.Id, s.Speed)
+				}
+			}()
 		}
 
 		for i := 0; i < 5; i++ {
@@ -60,21 +63,6 @@ func main() {
 	}
 }
 
-func listen(s *Section) {
-	ticker := time.NewTicker(5 * time.Second)
-	for _ = range ticker.C {
-		logger.Printf("Section: %d; speed: %d KB/s", s.Id, s.Speed)
-	}
-}
-
-func staticFilesHandler(rw http.ResponseWriter, req *http.Request) {
-	http.ServeFile(rw, req, req.URL.Path[1:])
-}
-
-func downloadHandler(rw http.ResponseWriter, req *http.Request) {
-	http.ServeFile(rw, req, "static/downloader.html")
-}
-
 func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
 		result, err := json.Marshal(resources)
@@ -82,7 +70,6 @@ func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 			logger.Println(err)
 			return
 		}
-		logger.Println(string(result))
 		rw.Write(result)
 	} else if req.Method == "POST" {
 		url := req.FormValue("URL")
@@ -111,4 +98,12 @@ func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 			go s.Download(res.Url, done)
 		}
 	}
+}
+
+func staticFilesHandler(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFile(rw, req, req.URL.Path[1:])
+}
+
+func indexHandler(rw http.ResponseWriter, req *http.Request) {
+	http.ServeFile(rw, req, "static/downloader.html")
 }
