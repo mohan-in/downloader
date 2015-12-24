@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
+	"golang.org/x/net/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,8 +18,8 @@ var (
 )
 
 func init() {
-	client = http.Client{}
 	logger = log.New(os.Stdout, "downloader: ", log.Lshortfile)
+
 	flag.BoolVar(&daemon, "daemon", false, "launch as daemon")
 	flag.StringVar(&url, "file", "", "the file to download")
 	flag.IntVar(&NoOfConnection, "n", 5, "Number of connections to the server")
@@ -34,6 +34,7 @@ func main() {
 		http.HandleFunc("/", indexHandler)
 		http.HandleFunc("/static/", staticFilesHandler)
 		http.HandleFunc("/resources", resourcesHandler)
+		http.Handle("/progress", websocket.Handler(progressHandler))
 		http.ListenAndServe(":8080", nil)
 	} else {
 		res, err := NewResource(url)
@@ -48,15 +49,14 @@ func main() {
 			s := s
 			go s.Download(res.Url, done)
 			go func() {
-				ticker := time.NewTicker(5 * time.Second)
-				for _ = range ticker.C {
-					logger.Printf("Section: %d; speed: %d KB/s", s.Id, s.Speed)
+				for _ = range time.Tick(5 * time.Second) {
+					logger.Printf("Section: %d; speed: %d KB/s; %% complete: %d", s.Id, s.Speed, s.PctComplete)
 				}
 			}()
 		}
 
-		for i := 0; i < 5; i++ {
-			<-done
+		for i := 0; i < len(res.Sections); i++ {
+			logger.Printf("Section %d completed", <-done)
 		}
 
 		ioutil.WriteFile("file", res.data, os.ModePerm)
@@ -64,17 +64,9 @@ func main() {
 }
 
 func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
-	if req.Method == "GET" {
-		result, err := json.Marshal(resources)
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		rw.Write(result)
-	} else if req.Method == "POST" {
+	if req.Method == "POST" {
 		url := req.FormValue("URL")
 
-		//create resource
 		res, err := NewResource(url)
 		if err != nil {
 			logger.Println(err)
@@ -82,17 +74,14 @@ func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 		}
 		resources = append(resources, res)
 
-		//func that waits for all sections to download
-		//then creates the file
 		done := make(chan int)
 		go func() {
-			for i := 0; i < 5; i++ {
+			for i := 0; i < len(res.Sections); i++ {
 				<-done
 			}
 			ioutil.WriteFile("file", res.data, os.ModePerm)
 		}()
 
-		//start downloading all sections
 		for _, s := range res.Sections {
 			s := s
 			go s.Download(res.Url, done)
@@ -106,4 +95,12 @@ func staticFilesHandler(rw http.ResponseWriter, req *http.Request) {
 
 func indexHandler(rw http.ResponseWriter, req *http.Request) {
 	http.ServeFile(rw, req, "static/downloader.html")
+}
+
+func progressHandler(ws *websocket.Conn) {
+	for _ = range time.Tick(5 * time.Second) {
+		if len(resources) != 0 {
+			websocket.JSON.Send(ws, resources)
+		}
+	}
 }

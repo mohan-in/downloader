@@ -1,11 +1,12 @@
 <link rel="import" href="/static/bower_components/polymer/polymer.html">
 <link rel="import" href="/static/bower_components/paper-toolbar/paper-toolbar.html">
-<link rel="import" href="/static/bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="/static/bower_components/iron-icons/iron-icons.html">
 <link rel="import" href="/static/bower_components/iron-icons/av-icons.html">
+<link rel="import" href="/static/bower_components/paper-icon-button/paper-icon-button.html">
 <link rel="import" href="/static/bower_components/paper-dialog/paper-dialog.html">
 <link rel="import" href="/static/bower_components/paper-input/paper-input.html">
 <link rel="import" href="/static/bower_components/paper-button/paper-button.html">
+<link rel="import" href="bower_components/iron-flex-layout/classes/iron-flex-layout.html">
 
 <link rel="import" href="/static/go-resource.html">
 <script src="/static/ajax.js"></script>
@@ -16,7 +17,7 @@
 			text-align: center;
 		}
 		#addDownloadDialog {
-			width: 500px;
+			width: 700px;
 		}
 		#addDownloadDialog paper-input {
 			width: 80%;
@@ -30,11 +31,14 @@
 			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
 
+		<template is="dom-repeat" items="[[resources]]">
+			<go-resource resource="[[item]]" ></go-resource>
+		</template>
 		<div id="resources"></div>
 
 		<paper-dialog id="addDownloadDialog">
-			<h2>Header</h2>
-			<paper-dialog-scrollable>
+			<h2>Add Resource</h2>
+			<paper-dialog-scrollable class="layout vertical center">
 				<paper-input id="urlInput" label="URL:"></paper-input>
 			</paper-dialog-scrollable>
 			<div class="buttons">
@@ -46,27 +50,16 @@
 
 	<script>
 		Polymer({
+			properties: {
+				resources: Array
+			},
+
 			ready: function() {
 				var that = this
-				ajax({
-					url: '/resources',
-					method: 'GET',
-					success: function(data) {
-						var resources = JSON.parse(data);
-						if(resources !== null) {
-							for (var i = 0; i < resources.length; i++) {
-								var elem = document.createElement("go-resource");
-								elem.resource = resources[i];
-								elem.sections = resources[i].Sections;
-								that.$.resources.appendChild(elem);
-							}
-							
-						}
-					},
-					error: function() {
-						console.log('error in fetching resources');
-					}
-				})
+				var ws = new WebSocket('ws://192.168.1.101:8080/progress');
+				ws.onmessage = function(e) {
+					that.resources = JSON.parse(e.data);
+				};
 			},
 			
 			addDownload: function() {

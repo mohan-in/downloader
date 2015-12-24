@@ -33,7 +33,7 @@ type Section struct {
 	stop        chan int
 }
 
-var client http.Client
+var client http.Client = http.Client{}
 
 func NewResource(url string) (*Resource, error) {
 	res := &Resource{
@@ -41,12 +41,7 @@ func NewResource(url string) (*Resource, error) {
 	}
 
 	//find out the size of resource
-	req, err := http.NewRequest("HEAD", res.Url, nil)
-	if err != nil {
-		logger.Println(err)
-		return nil, err
-	}
-	resp, err := client.Do(req)
+	resp, err := http.Head(res.Url)
 	if err != nil {
 		logger.Println(err)
 		return nil, err
@@ -97,7 +92,6 @@ func (s *Section) Download(url string, done chan int) {
 	if err != nil {
 		logger.Println(err)
 	}
-
 	defer resp.Body.Close()
 
 	var bufSize, sectionSize int64
@@ -109,13 +103,11 @@ func (s *Section) Download(url string, done chan int) {
 		for _ = range ticker.C {
 			s.Speed = bufSize / (1024 * 5)
 			bufSize = 0
-			s.PctComplete = (len(s.data) / int((s.end - s.start))) * 100
+			s.PctComplete = int(sectionSize * 100 / (s.end - s.start))
 		}
 	}()
 
-	//buf is a buffer to store the result from each read operation
 	buf := make([]byte, NetworkSpeed<<10)
-
 	for {
 		select {
 		case _ = <-s.pause:
@@ -131,7 +123,6 @@ func (s *Section) Download(url string, done chan int) {
 
 			if err != nil {
 				if err == io.EOF {
-					logger.Printf("Section %d completed", s.Id)
 					done <- s.Id
 					s.PctComplete = 100
 					return

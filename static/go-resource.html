@@ -33,14 +33,13 @@
 			<paper-icon-button icon="av:stop"></paper-icon-button>
 		</paper-item>
 		<iron-collapse id="collapse">
-			<template is="dom-repeat" items="{{sections}}">
+			<template is="dom-repeat" items="[[resource.Sections]]">
 				<paper-icon-item>
 					<paper-item-body>
 						<span>Section [[item.Id]]</span>
 						<paper-progress value="[[item.PctComplete]]"></paper-progress>
 					</paper-item-body>
 					<paper-icon-button icon="av:pause"></paper-icon-button>
-					<paper-icon-button icon="av:stop"></paper-icon-button>	
 				</paper-icon-item>
 			</template>
 		</iron-collapse>
@@ -52,9 +51,8 @@
 			is: 'go-resource',
 
 			properties: {
-				resource: Object,
-				sections: {
-					type: Array,
+				resource: {
+					type: Object,
 					observer: '_calcResourcePct'
 				},
 				resourcePct: String
@@ -62,10 +60,10 @@
 
 			_calcResourcePct: function(newValue, oldValue) {
 				var pct = 0;
-				for (var i = 0; i < newValue.length; i++) {
-					pct = pct + newValue[i].PctComplete;
+				for (var i = 0; i < newValue.Sections.length; i++) {
+					pct = pct + newValue.Sections[i].PctComplete;
 				}
-        		this.resourcePct = pct/newValue.length;
+        		this.resourcePct = pct/newValue.Sections.length;
       		},
 
 			toggle: function() {
