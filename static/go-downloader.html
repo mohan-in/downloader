@@ -50,12 +50,14 @@
 
 	<script>
 		Polymer({
+			is: 'go-downloader',
+
 			properties: {
 				resources: Array
 			},
 
 			ready: function() {
-				var that = this
+				var that = this;
 				var ws = new WebSocket('ws://192.168.1.101:8080/progress');
 				ws.onmessage = function(e) {
 					that.resources = JSON.parse(e.data);
@@ -63,7 +65,7 @@
 			},
 			
 			addDownload: function() {
-				this.$.addDownloadDialog.open()
+				this.$.addDownloadDialog.open();
 			},
 			
 			addResource: function() {
@@ -71,10 +73,10 @@
 					url: '/resources',
 					method: 'POST',
 					data: {
-						URL: this.$.urlInput.value
+						URL: this.$.urlInput.value;
 					},
 					success: function() {
-						console.log('added resource successfully');
+						this.$.urlInput.value = "";
 					},
 					error: function() {
 						console.log('error in adding resource');
