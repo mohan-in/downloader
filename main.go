@@ -104,3 +104,34 @@ func progressHandler(ws *websocket.Conn) {
 		}
 	}
 }
+
+func stopHandler(rw http.ResponseWriter, req *http.Request) {
+	id := req.FormValue("Id")
+	for i, r := range resources {
+		if string(r.Id) == id {
+			r.Stop()
+			resources = append(resources[:i], resources[i+1:]...)
+			return
+		}
+	}
+}
+
+func pauseHandler(rw http.ResponseWriter, req *http.Request) {
+	resourceId := req.FormValue("ResourceId")
+	sectionId := req.FormValue("SectionId")
+
+	for _, r := range resources {
+		if string(r.Id) == resourceId {
+			if sectionId == "" {
+				r.Pause()
+				return
+			} else {
+				for _, s := range r.Sections {
+					if sectionId == string(s.Id) {
+						s.pause <- 0
+					}
+				}
+			}
+		}
+	}
+}

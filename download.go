@@ -14,6 +14,7 @@ var (
 )
 
 type Resource struct {
+	Id          int
 	Url         string
 	data        []byte
 	Size        int64
@@ -78,6 +79,18 @@ func NewResource(url string) (*Resource, error) {
 	}
 
 	return res, nil
+}
+
+func (r *Resource) Stop() {
+	for _, s := range r.Sections {
+		s.stop <- 0
+	}
+}
+
+func (r *Resource) Pause() {
+	for _, s := range r.Sections {
+		s.pause <- 0
+	}
 }
 
 func (s *Section) Download(url string, done chan int) {
