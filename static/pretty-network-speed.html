@@ -1,0 +1,43 @@
+<link rel="import" href="/static/bower_components/polymer/polymer.html">
+
+<dom-module id="pretty-network-speed">
+	<template>
+		<span>[[prettySpeed]]<span>
+	</template>
+
+	<script>
+		Polymer({
+			is: 'pretty-network-speed',
+
+			properties: {
+				speed: {
+					type: Number,
+					observer: '_format'
+				},
+
+				prettySpeed: String
+			},
+
+			_format: function() {
+				if(this.speed <= 1024) {
+					this.prettySpeed = this.speed + ' B/s';
+					return;
+				} 
+				
+				this.speed = this.speed>>10;
+				if(this.speed <= 1024) {			
+					this.prettySpeed = this.speed + ' KB/s';
+					return;
+				}
+
+				this.speed = this.speed>>10;
+				if(this.speed <= 1024) {			
+					this.prettySpeed = this.speed + ' MB/s';
+					return;
+				}
+			}
+		});
+	</script>
+
+</dom-module>
+

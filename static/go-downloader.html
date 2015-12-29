@@ -16,17 +16,17 @@
 		.title {
 			text-align: center;
 		}
-		#addDownloadDialog {
+		#URLDialog {
 			width: 700px;
 		}
-		#addDownloadDialog paper-input {
+		#URLDialog paper-input {
 			width: 80%;
 		}
 	</style>
 
 	<template>
 		<paper-toolbar>
-			<paper-icon-button icon="add" on-click="addDownload"></paper-icon-button>
+			<paper-icon-button icon="add" on-click="openURLDialog"></paper-icon-button>
 			<div class="title">Download Accelerator</div>
 			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
@@ -36,7 +36,7 @@
 		</template>
 		<div id="resources"></div>
 
-		<paper-dialog id="addDownloadDialog">
+		<paper-dialog id="URLDialog">
 			<h2>Add Resource</h2>
 			<paper-dialog-scrollable class="layout vertical center">
 				<paper-input id="urlInput" label="URL:"></paper-input>
@@ -58,25 +58,26 @@
 
 			ready: function() {
 				var that = this;
-				var ws = new WebSocket('ws://192.168.1.101:8080/progress');
+				var ws = new WebSocket('ws://' + window.location.host + '/progress');
 				ws.onmessage = function(e) {
 					that.resources = JSON.parse(e.data);
 				};
 			},
 			
-			addDownload: function() {
-				this.$.addDownloadDialog.open();
+			openURLDialog: function() {
+				this.$.URLDialog.open();
 			},
 			
 			addResource: function() {
+				var that = this;
 				ajax({
 					url: '/resources',
 					method: 'POST',
 					data: {
-						URL: this.$.urlInput.value;
+						URL: this.$.urlInput.value
 					},
 					success: function() {
-						this.$.urlInput.value = "";
+						that.$.urlInput.value = "";
 					},
 					error: function() {
 						console.log('error in adding resource');

@@ -114,7 +114,7 @@ func (s *Section) Download(url string, done chan int) {
 	defer ticker.Stop()
 	go func() {
 		for _ = range ticker.C {
-			s.Speed = bufSize / (1024 * 5)
+			s.Speed = bufSize / 5
 			bufSize = 0
 			s.PctComplete = int(sectionSize * 100 / (s.end - s.start))
 		}
@@ -130,14 +130,11 @@ func (s *Section) Download(url string, done chan int) {
 		default:
 			n, err := resp.Body.Read(buf)
 
-			copy(s.data[sectionSize:], buf[0:n])
-			sectionSize += int64(n)
-			bufSize = bufSize + int64(n)
-
 			if err != nil {
 				if err == io.EOF {
 					done <- s.Id
 					s.PctComplete = 100
+					s.Speed = 0
 					return
 				} else {
 					logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
@@ -146,6 +143,10 @@ func (s *Section) Download(url string, done chan int) {
 					return
 				}
 			}
+
+			copy(s.data[sectionSize:], buf[0:n])
+			sectionSize += int64(n)
+			bufSize = bufSize + int64(n)
 		}
 	}
 }

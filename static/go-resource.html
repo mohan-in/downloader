@@ -5,6 +5,8 @@
 <link rel="import" href="/static/bower_components/paper-progress/paper-progress.html">
 <link rel="import" href="/static/bower_components/iron-collapse/iron-collapse.html">
 
+<link rel="import" href="/static/pretty-network-speed.html">
+
 <dom-module id="go-resource">
 	<style>
 		paper-progress {
@@ -24,9 +26,11 @@
 	<template>
 		<div class="container">
 		<paper-item>
-			<paper-icon-button icon="expand-more" on-click="toggle"></paper-icon-button>
+			<paper-icon-button id="toggleBtn" icon="expand-more" on-click="toggle"></paper-icon-button>
 			<paper-item-body>
-				<span>[[resource.Url]] - [[resourcePct]] %</span>
+				<span>[[resource.Url]] - [[resourcePct]] % @ 
+					<pretty-network-speed speed="[[resourceSpeed]]"></pretty-network-speed>
+				</span>
 				<paper-progress value="[[resourcePct]]"></paper-progress>
 			</paper-item-body>
 			<paper-icon-button icon="av:pause"></paper-icon-button>
@@ -36,7 +40,9 @@
 			<template is="dom-repeat" items="[[resource.Sections]]">
 				<paper-icon-item>
 					<paper-item-body>
-						<span>Section [[item.Id]] - [[item.PctComplete]] %</span>
+						<span>Section [[item.Id]] - [[item.PctComplete]] % @ 
+							<pretty-network-speed speed="[[item.Speed]]"></pretty-network-speed>
+						</span>
 						<paper-progress value="[[item.PctComplete]]"></paper-progress>
 					</paper-item-body>
 					<paper-icon-button icon="av:pause"></paper-icon-button>
@@ -53,20 +59,28 @@
 			properties: {
 				resource: {
 					type: Object,
-					observer: '_calcResourcePct'
+					observer: '_calcCumulative'
 				},
-				resourcePct: String
+				resourcePct: String,
+				resourceSpeed: Number
 			},
 
-			_calcResourcePct: function(newValue, oldValue) {
+			_calcCumulative: function(newValue, oldValue) {
 				var pct = 0;
+				this.resourceSpeed = 0;
 				for (var i = 0; i < newValue.Sections.length; i++) {
-					pct = pct + newValue.Sections[i].PctComplete;
+					pct += newValue.Sections[i].PctComplete;
+					this.resourceSpeed += newValue.Sections[i].Speed;
 				}
         		this.resourcePct = pct/newValue.Sections.length;
       		},
 
 			toggle: function() {
+				if(this.$.toggleBtn.icon === 'expand-less') {
+					this.$.toggleBtn.icon = 'expand-more';
+				} else {
+					this.$.toggleBtn.icon = 'expand-less';
+				}
 				this.$.collapse.toggle();
 			}
 		});
