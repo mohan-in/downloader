@@ -36,8 +36,9 @@ type Section struct {
 
 var client http.Client = http.Client{}
 
-func NewResource(url string) (*Resource, error) {
+func NewResource(url string, id int) (*Resource, error) {
 	res := &Resource{
+		Id:  id,
 		Url: url,
 	}
 
