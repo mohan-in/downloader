@@ -28,7 +28,6 @@
 		<paper-toolbar>
 			<paper-icon-button icon="add" on-click="openURLDialog"></paper-icon-button>
 			<div class="title">Download Accelerator</div>
-			<paper-icon-button icon="settings"></paper-icon-button>
 		</paper-toolbar>
 
 		<template is="dom-repeat" items="[[resources]]">
@@ -76,8 +75,8 @@
 					data: {
 						URL: this.$.urlInput.value
 					},
-					success: function() {
-						that.$.urlInput.value = "";
+					success: function(data) {
+						that.resources = JSON.parse(data);
 					},
 					error: function() {
 						console.log('error in adding resource');

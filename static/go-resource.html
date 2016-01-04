@@ -33,8 +33,8 @@
 				</span>
 				<paper-progress value="[[resourcePct]]"></paper-progress>
 			</paper-item-body>
-			<paper-icon-button on-click="pauseResource" icon="av:pause"></paper-icon-button>
-			<paper-icon-button on-click="stopResource" icon="av:stop"></paper-icon-button>
+			<paper-icon-button id="pauseBtn" on-click="pauseResource" icon="av:pause-circle-outline"></paper-icon-button>
+			<paper-icon-button on-click="stopResource" icon="delete"></paper-icon-button>
 		</paper-item>
 		<iron-collapse id="collapse">
 			<template is="dom-repeat" items="[[resource.Sections]]">
@@ -84,6 +84,11 @@
 			},
 
 			pauseResource: function() {
+				if(this.$.pauseBtn.icon === 'av:pause-circle-outline') {
+					this.$.pauseBtn.icon = 'av:play-circle-outline';
+				} else {
+					this.$.pauseBtn.icon = 'av:pause-circle-outline';
+				}
 				ajax({
 					method: 'POST',
 					url: '/resources/pause',

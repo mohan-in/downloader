@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -51,6 +52,13 @@ func NewResource(url string, id int) (*Resource, error) {
 	res.Size = resp.ContentLength
 	res.data = make([]byte, res.Size)
 
+	if resp.Header.Get("Content-Disposition") != "" {
+		res.FileName = resp.Header.Get("Content-Disposition")
+	} else {
+		split := strings.Split(url, "/")
+		res.FileName = split[len(split)-1]
+	}
+
 	//determine number of sections
 	var NoOfSections int
 	if res.Size>>20 < 50 {
@@ -70,6 +78,7 @@ func NewResource(url string, id int) (*Resource, error) {
 			data:  res.data[j : j+res.sectionSize],
 			start: j,
 			pause: make(chan int),
+			stop:  make(chan int),
 		}
 		if i+1 == NoOfSections {
 			res.Sections[i].end = res.Size
