@@ -13,21 +13,16 @@ import (
 )
 
 var (
-	logger    *log.Logger
 	resources []*Resource
 	url       string
 	daemon    bool
 )
 
 func init() {
-	logger = log.New(os.Stdout, "downloader: ", log.Lshortfile)
-
-	flag.BoolVar(&daemon, "d", false, "launch as daemon")
-	flag.BoolVar(&daemon, "daemon", false, "launch as daemon")
-	flag.StringVar(&url, "f", "", "the file to download")
-	flag.StringVar(&url, "file", "", "the file to download")
-	flag.IntVar(&NoOfConnection, "n", 5, "Number of connections to the server")
-	flag.IntVar(&SectionSize, "size", 50, "Section size in MB")
+	flag.BoolVar(&daemon, "d", false, "launch as daemon with Web UI @ :8080")
+	flag.StringVar(&url, "url", "", "URL of file to download")
+	flag.IntVar(&NoOfConnection, "c", 5, "Number of simultaneous connections to the server")
+	flag.IntVar(&SectionSize, "ss", 20, "Section size in MB")
 	flag.IntVar(&NetworkSpeed, "speed", 128, "Network speed in KB")
 }
 
@@ -43,9 +38,14 @@ func main() {
 		http.Handle("/progress", websocket.Handler(progressHandler))
 		http.ListenAndServe(":8080", nil)
 	} else {
+		if url == "" {
+			flag.Usage()
+			return
+		}
+
 		res, err := NewResource(url, 0)
 		if err != nil {
-			logger.Println(err)
+			log.Println(err)
 			return
 		}
 
@@ -56,13 +56,13 @@ func main() {
 			go s.Download(res.Url, done)
 			go func() {
 				for _ = range time.Tick(5 * time.Second) {
-					logger.Printf("Section: %d; speed: %d KB/s; %% complete: %d", s.Id, s.Speed, s.PctComplete)
+					log.Printf("Section: %d; speed: %d KB/s; %% complete: %d", s.Id, s.Speed, s.PctComplete)
 				}
 			}()
 		}
 
 		for i := 0; i < len(res.Sections); i++ {
-			logger.Printf("Section %d completed", <-done)
+			log.Printf("Section %d completed", <-done)
 		}
 
 		ioutil.WriteFile(res.FileName, res.data, os.ModePerm)
@@ -75,7 +75,7 @@ func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 
 		res, err := NewResource(url, len(resources))
 		if err != nil {
-			logger.Println(err)
+			log.Println(err)
 			return
 		}
 		resources = append(resources, res)

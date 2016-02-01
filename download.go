@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -10,8 +11,8 @@ import (
 
 var (
 	NoOfConnection int = 5
-	SectionSize    int = 50
-	NetworkSpeed   int = 128
+	SectionSize    int = 20  //MB
+	NetworkSpeed   int = 128 //KB
 )
 
 type Resource struct {
@@ -46,14 +47,17 @@ func NewResource(url string, id int) (*Resource, error) {
 	//find out the size of resource
 	resp, err := http.Head(res.Url)
 	if err != nil {
-		logger.Println(err)
+		log.Println(err)
 		return nil, err
 	}
 	res.Size = resp.ContentLength
 	res.data = make([]byte, res.Size)
 
 	if resp.Header.Get("Content-Disposition") != "" {
-		res.FileName = resp.Header.Get("Content-Disposition")
+		//Content-Disposition: attachment; filename="fname.ext"
+		cd := resp.Header.Get("Content-Disposition")
+		split := strings.Split(cd, "filename=")
+		res.FileName = split[len(split)-1]
 	} else {
 		split := strings.Split(url, "/")
 		res.FileName = split[len(split)-1]
@@ -65,7 +69,7 @@ func NewResource(url string, id int) (*Resource, error) {
 		res.sectionSize = res.Size / int64(NoOfConnection)
 		NoOfSections = NoOfConnection
 	} else {
-		res.sectionSize = int64(SectionSize) >> 20
+		res.sectionSize = int64(SectionSize * 1024 * 1024)
 		NoOfSections = int(res.Size / res.sectionSize)
 	}
 
@@ -106,14 +110,14 @@ func (r *Resource) Pause() {
 func (s *Section) Download(url string, done chan int) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		logger.Println(err)
+		log.Println(err)
 	}
 
 	req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", s.start, s.end))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Println(err)
+		log.Println(err)
 	}
 	defer resp.Body.Close()
 
@@ -147,7 +151,7 @@ func (s *Section) Download(url string, done chan int) {
 					s.Speed = 0
 					return
 				} else {
-					logger.Printf("Error in downloading section %d. Restartinf download", s.Id)
+					log.Printf("Error in downloading section %d. Restartinf download", s.Id)
 					s.start += bufSize
 					go s.Download(url, done)
 					return
