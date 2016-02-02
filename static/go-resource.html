@@ -71,7 +71,7 @@
 					pct += newValue.Sections[i].PctComplete;
 					this.resourceSpeed += newValue.Sections[i].Speed;
 				}
-        		this.resourcePct = pct/newValue.Sections.length;
+        		this.resourcePct = (pct/newValue.Sections.length).toFixed(2);
       		},
 
 			toggle: function() {

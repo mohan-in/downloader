@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -39,6 +40,7 @@ type Section struct {
 var client http.Client = http.Client{}
 
 func NewResource(url string, id int) (*Resource, error) {
+
 	res := &Resource{
 		Id:  id,
 		Url: url,
@@ -69,27 +71,30 @@ func NewResource(url string, id int) (*Resource, error) {
 		res.sectionSize = res.Size / int64(NoOfConnection)
 		NoOfSections = NoOfConnection
 	} else {
-		res.sectionSize = int64(SectionSize * 1024 * 1024)
-		NoOfSections = int(res.Size / res.sectionSize)
+		res.sectionSize = int64(SectionSize << 20)
+		NoOfSections = int(math.Ceil(float64(res.Size) / float64(res.sectionSize)))
 	}
 
 	//create sections
-	var j int64
+	var start, end int64
 	res.Sections = make([]*Section, NoOfSections)
 	for i := 0; i < NoOfSections; i++ {
+		if i+1 == NoOfSections {
+			end = res.Size
+		} else {
+			end = start + res.sectionSize
+		}
+
 		res.Sections[i] = &Section{
 			Id:    i,
-			data:  res.data[j : j+res.sectionSize],
-			start: j,
+			data:  res.data[start:end],
+			start: start,
+			end:   end - 1,
 			pause: make(chan int),
 			stop:  make(chan int),
 		}
-		if i+1 == NoOfSections {
-			res.Sections[i].end = res.Size
-		} else {
-			j += res.sectionSize
-			res.Sections[i].end = j - 1
-		}
+
+		start += res.sectionSize
 	}
 
 	return res, nil
