@@ -78,6 +78,7 @@ func resourcesHandler(rw http.ResponseWriter, req *http.Request) {
 			log.Println(err)
 			return
 		}
+
 		resources = append(resources, res)
 
 		done := make(chan int)

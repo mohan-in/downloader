@@ -52,6 +52,7 @@ func NewResource(url string, id int) (*Resource, error) {
 		log.Println(err)
 		return nil, err
 	}
+
 	res.Size = resp.ContentLength
 	res.data = make([]byte, res.Size)
 
@@ -80,16 +81,16 @@ func NewResource(url string, id int) (*Resource, error) {
 	res.Sections = make([]*Section, NoOfSections)
 	for i := 0; i < NoOfSections; i++ {
 		if i+1 == NoOfSections {
-			end = res.Size
+			end = res.Size - 1
 		} else {
-			end = start + res.sectionSize
+			end = start + res.sectionSize - 1
 		}
 
 		res.Sections[i] = &Section{
 			Id:    i,
-			data:  res.data[start:end],
+			data:  res.data[start : end+1],
 			start: start,
-			end:   end - 1,
+			end:   end,
 			pause: make(chan int),
 			stop:  make(chan int),
 		}
